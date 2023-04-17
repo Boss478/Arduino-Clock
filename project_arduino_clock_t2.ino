@@ -227,18 +227,6 @@ void function_timer() {
 
     float progress = ((float)time_sec / stop_time);
     int color = progress * 255;
-    Serial.print("Time = ");
-    Serial.print(time_sec);
-    Serial.print(" | Stop_time = ");
-    Serial.print(stop_time);
-    Serial.print(" | Progress = ");
-    Serial.print(progress);
-    Serial.print(" | Color = ");
-    Serial.print(color);
-    Serial.print(" | ");
-    Serial.print(255 - color, DEC);
-    Serial.print(" ");
-    Serial.println(color, DEC);
     rgb_color(255 - color, color, 0);
 
     dt = getTime(time_sec);
