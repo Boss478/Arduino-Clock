@@ -15,12 +15,15 @@ int mode_current = 0;
 int mode_previous = -1;
 const String mode_list[] = { "Time", "Stopwatch", "Timer" };
 
-const byte pin_mode_button = 7;
-const byte pin_start_button = 8;
-const byte pin_reset_button = 9;
-const byte pin_add_button = 10;
-const byte pin_remove_button = 11;
-
+const byte pin_mode_button = 6;
+const byte pin_start_button = 7;
+const byte pin_reset_button = 8;
+const byte pin_remove_button = 12;
+const byte pin_add_button = 13;
+const byte pin_buzzer = 3;
+const byte pin_red = 9;
+const byte pin_green = 10;
+const byte pin_blue = 11;
 
 bool is_started = false;
 uint32_t start_time = 0;
@@ -54,6 +57,10 @@ void setup() {
   pinMode(pin_reset_button, INPUT);
   pinMode(pin_add_button, INPUT);
   pinMode(pin_remove_button, INPUT);
+  pinMode(pin_buzzer, OUTPUT);
+  pinMode(pin_red, OUTPUT);
+  pinMode(pin_green, OUTPUT);
+  pinMode(pin_blue, OUTPUT);
 }
 
 void loop() {
@@ -75,7 +82,8 @@ void loop() {
     dt = RtcDateTime(0, 0, 0, 0, 0, 0);
     stop_time = 0;
 
-    //tone();
+    uint16_t rd = random(100, 1000);
+    tone(pin_buzzer, rd, 1000);
 
     int size = sizeof(mode_list) / sizeof(String) - 1;
     if (mode_current >= size) {
@@ -88,7 +96,7 @@ void loop() {
 
   } else {
     //Serial.println("No");
-
+    //noTone(pin_buzzer);
     // Get current DateTime
     RtcDateTime now = Rtc.GetDateTime();
     String current = getDateTime(now, false);
@@ -119,6 +127,7 @@ void loop() {
 String time_pre;
 void function_time(String current) {
   if (time_pre != current) {
+    rgb_color(102, 0, 204);
     time_pre = current;
     lcd.setCursor(0, 1);
     lcd.print((String(current)));
@@ -127,6 +136,7 @@ void function_time(String current) {
 
 // Function : stopwatch
 void function_stopwatch() {
+  //rgb_color(0, 0, 0);
   uint32_t current_time = 0;
 
   // Check if the start button is pressed
@@ -149,6 +159,8 @@ void function_stopwatch() {
     lcd.setCursor(0, 1);
     lcd.print((String(datetime)));
 
+    rgb_color(255, 0, 0);
+
     if (digitalRead(pin_reset_button) == HIGH) {
       refreshDisplay();
       start_time = millis();
@@ -170,6 +182,7 @@ void function_stopwatch() {
     lcd.setCursor(0, 1);
     lcd.print(datetime);
     delay(150);
+    rgb_color(0, 128, 0);
   }
 }
 
@@ -212,33 +225,43 @@ void function_timer() {
     uint32_t remaining_time = stop_time_ms - elapsed_time;
     uint32_t time_sec = remaining_time / 1000;
 
+    float progress = ((float)time_sec / stop_time);
+    int color = progress * 255;
+    Serial.print("Time = ");
+    Serial.print(time_sec);
+    Serial.print(" | Stop_time = ");
+    Serial.print(stop_time);
+    Serial.print(" | Progress = ");
+    Serial.print(progress);
+    Serial.print(" | Color = ");
+    Serial.print(color);
+    Serial.print(" | ");
+    Serial.print(255 - color, DEC);
+    Serial.print(" ");
+    Serial.println(color, DEC);
+    rgb_color(255 - color, color, 0);
+
     dt = getTime(time_sec);
     datetime = getDateTime(dt, false);
 
-    Serial.print("Current Time : ");
-    Serial.print(current_time);
-    Serial.print(" | Start Time : ");
-    Serial.print(start_time);
-    Serial.print(" | Elapsed Time : ");
-    Serial.print(elapsed_time);
-    Serial.print(" | Time Set = ");
-    Serial.print(stop_time);
-    Serial.print(" | Remaining = ");
-    Serial.println(remaining_time);
-
     lcd.setCursor(0, 1);
     lcd.print(datetime);
+    if (time_sec <= 3 && time_sec > 0) {
+      tone(pin_buzzer, (200 * time_sec), 1000);
+    }
 
     if (time_sec <= 0) {
+      tone(pin_buzzer, 1000, 5000);
       is_started = false;
       Serial.println("TIMER STOPPED : Time's Up!");
-      //tone()
       refreshDisplay();
     }
 
   } else {
+    rgb_color(0, 0, 255);
     lcd.setCursor(0, 1);
     lcd.print(datetime);
+    //noTone(pin_buzzer);
 
     // RESET time
     if (digitalRead(pin_reset_button) == HIGH) {
@@ -256,6 +279,7 @@ void function_timer() {
       lcd.print(datetime);
       Serial.print("Stop Time : +10s = ");
       Serial.println(stop_time);
+      rgb_color(67, 255, 60);
       delay(500);
     }
     if (digitalRead(pin_remove_button) == HIGH) {
@@ -268,8 +292,9 @@ void function_timer() {
       datetime = getDateTime(dt, false);
       lcd.setCursor(0, 1);
       lcd.print(datetime);
-      Serial.print("Stop Time : +10s = ");
+      Serial.print("Stop Time : -10s = ");
       Serial.println(stop_time);
+      rgb_color(128, 0, 0);
       delay(500);
     }
   }
@@ -288,6 +313,12 @@ RtcDateTime getTime(uint32_t time_s) {
   uint32_t seconds = time_s % 60;
   RtcDateTime t = RtcDateTime(0, 0, 0, hours, minutes, seconds);
   return t;
+}
+
+void rgb_color(int red, int green, int blue) {
+  analogWrite(pin_red, red);
+  analogWrite(pin_green, green);
+  analogWrite(pin_blue, blue);
 }
 
 // Get DateTime Function
